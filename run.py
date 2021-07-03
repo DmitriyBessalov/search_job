@@ -1,62 +1,47 @@
 #!/usr/bin/python
-''' Скрипт для уведомлений о новых вакансиях '''
+
 import requests
 from bs4 import BeautifulSoup as BS
 import time
+import datetime
 import sqlite3
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-import telepot
-import os
+from aiogram.utils import executor
+from aiogram import Bot, Dispatcher
+
 
 def get_requests(url, base_url, selector, metod=''):
-    if metod == 'post':
-        answ = s.post(url, data=postdata, headers=headers)
-    else:
-        try:
-            answ = s.get(url, headers=headers)
-        except:
-            print('not get data: ' + url)
-            return
+    new = ''
+    try:
+        print(str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) + ' Получение страницы: ' + url)
+        while not len(new):
+            if metod == 'post':
+                answ = s.post(url, data=postdata, headers=headers)
+            else:
+                answ = s.get(url, headers=headers)
 
-    ans_bs = BS(answ.content, 'html.parser')
-    new = ans_bs.select(selector)
-    for elem in new:
-        new_link[base_url + elem.attrs['href']] = elem.text
+            ans_bs = BS(answ.content, 'html.parser')
+            new = ans_bs.select(selector)
+
+            print(str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) + " Ссылок на странице: " + str(len(new)))
+
+            if len(new):
+                for elem in new:
+                    new_link[base_url + elem.attrs['href']] = elem.text
+            else:
+                time.sleep(61)
+                print(str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) + 'Ожидание 1 мин')
+    finally:
+        pass
 
 
-def send_mail(links={}):
-     addr_from = "bez1dn6a@mail.ru"                      # Адресат
-     addr_to = "bez1dn6a@yandex.ru"                      # Получатель
-     password = "************"                           # Пароль
-     msg = MIMEMultipart()                               # Создаем сообщение
-     msg['From'] = addr_from                             # Адресат
-     msg['To'] = addr_to                                 # Получатель
-     msg['Subject'] = 'Ссылки по работе'                 # Тема сообщения
-     html = """
-     <html>
-       <head></head>
-       <body>"""
-     for elem in links:
-         html = html + '<a href="' + elem + '">' + links[elem] + '</a><br>'
-     html = html + """
-       </body>
-     </html>
-     """
-     msg.attach(MIMEText(html, 'html', 'utf-8'))         # Добавляем в сообщение HTML-фрагмент
-     server = smtplib.SMTP('smtp.mail.ru', 25)           # Создаем объект SMTP
-     server.set_debuglevel(False)                        # Выключаем режим отладки
-     server.starttls()                                   # Начинаем шифрованный обмен по TLS
-     server.login(addr_from, password)                   # Получаем доступ
-     server.send_message(msg)                            # Отправляем сообщение
-     server.quit()                                       # Выходим
+API_TOKEN = '***********'
+bot = Bot(token=API_TOKEN)
+dp = Dispatcher(bot)
 
-def send_telegram(links={}):
-    TelegramBot = telepot.Bot('*****************')
+
+async def send_telegram(links={}):
     for elem in links:
-        TelegramBot.sendMessage(297036937, elem)
-    #    html = html + '<a href="' + elem + '">' + links[elem] + '</a><br>'
+        await bot.send_message(297036937, elem)
 
 
 new_link = {}
@@ -91,28 +76,37 @@ postdata = {
     'location_db_id': '0',
     'location': '%D0%92%D1%81%D0%B5+%D1%81%D1%82%D1%80%D0%B0%D0%BD%D1%8B',
     'hide_exec': '1',
-    'pf_cost_from': '5000',
+    'pf_cost_from': '',
+    #    'pf_cost_from': '5000',
     'pf_cost_to': '',
+    #   'pf_cost_to': '70000',
     'u_token_key': 'a8dcb7e72c80fef5394da9732d04e9d9'
 }
 
 i = -1
-while 1:
+while int(datetime.datetime.now().strftime("%H")) != 0:
     i += 1
-    print('fl', i)
-    postdata['pf_keywords'] = 'python'
-    get_requests('https://www.fl.ru/projects/', 'https://www.fl.ru', 'a.b-post__link', 'post')
+    # print('fl', i)
+    # postdata['pf_keywords'] = 'python'
+    # get_requests('https://www.fl.ru/projects/', 'https://www.fl.ru', 'a.b-post__link', 'post')
     postdata['pf_keywords'] = 'django'
     get_requests('https://www.fl.ru/projects/', 'https://www.fl.ru', 'a.b-post__link', 'post')
+#    time.sleep(151)
+#    postdata['pf_keywords'] = 'react'
+#    get_requests('https://www.fl.ru/projects/', 'https://www.fl.ru', 'a.b-post__link', 'post')
+    time.sleep(301)
 
-    if i % 4 == 0:
-        print('all')
-        get_requests('https://krasnodar.hh.ru/search/vacancy?search_period=7&clusters=true&area=1438&text=Python&order_by=publication_time&enable_snippets=true', '', 'a.bloko-link.HH-LinkModifier')
-        # get_requests('https://krasnodar.hh.ru/search/vacancy?clusters=true&enable_snippets=true&order_by=publication_time&schedule=remote&search_period=3&text=Python&L_save_area=true&area=113&from=cluster_area&showClusters=true', '', 'a.bloko-link.HH-LinkModifier')
-        get_requests('https://career.habr.com/vacancies?city_id=707&type=all', 'https://career.habr.com/', 'div.vacancy-card__title>a')
-        # get_requests('https://career.habr.com/vacancies?q=python&remote=true&type=all', 'https://career.habr.com/', 'div.vacancy-card__title>a')
-        # get_requests('https://russia.superjob.ru/vacancy/search/?keywords=python&remote_work=1', 'https://russia.superjob.ru', 'a._1UJAN')
+    if i % 6 == 0:
+        # print('all')
+        # get_requests('https://krasnodar.hh.ru/search/vacancy?search_period=7&clusters=true&area=1438&text=Python&order_by=publication_time&enable_snippets=true', '', 'a.bloko-link.HH-LinkModifier')
+        get_requests('https://krasnodar.hh.ru/search/vacancy?clusters=true&enable_snippets=true&order_by=publication_time&schedule=remote&search_period=3&text=Python&L_save_area=true&area=113&from=cluster_area&showClusters=true', '', 'a.bloko-link.HH-LinkModifier')
+        # get_requests('https://career.habr.com/vacancies?city_id=707&type=all', 'https://career.habr.com/', 'div.vacancy-card__title>a')
+        get_requests('https://career.habr.com/vacancies?q=python&remote=true&type=all', 'https://career.habr.com/', 'div.vacancy-card__title>a')
+        get_requests('https://russia.superjob.ru/vacancy/search/?keywords=python&remote_work=1', 'https://russia.superjob.ru', 'a._1UJAN')
         get_requests('https://rabota.yandex.ru/krasnodarskiy_kray/vakansii/?text=python&top_days=7&sort=cr_date', '', 'a.link.serp-vacancy__name.stat__click')
+        postdata['pf_keywords'] = 'fastapi'
+        get_requests('https://www.fl.ru/projects/', 'https://www.fl.ru', 'a.b-post__link', 'post')
+        time.sleep(151)
 
     for link in new_link:
 
@@ -126,31 +120,23 @@ while 1:
         if None == row:
             cursorObj.execute("INSERT INTO vacancy VALUES (?, ?, DateTime('now', 'localtime'))", (link, new_link[link]))
             conn.commit()
-            print(link, new_link[link])
-
-            os.system('google-chrome-stable "' + link + '"')
-
-            try:
-                os.system('notify-send "' + new_link[link] + '"')
-            except:
-                print(link, new_link[link])
+            print(str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) + ' ' + link, new_link[link])
 
             send_link[link] = new_link[link]
             time.sleep(8)
         conn.close()
 
-    # try:
-    #     send_mail(send_link)
-    # except:
-    #     print('email to spam banned')
-
-    # try:
-    #    send_telegram(send_link)
-    # except:
-    #     print('telegramm not connected')
+    try:
+        executor.start(dp, send_telegram(send_link))
+    except:
+        print('telegramm not connected')
 
     new_link.clear()
     send_link.clear()
 
-    print('wait 5 min')
-    time.sleep(300)
+    if 9 <= int(datetime.datetime.now().strftime("%H")) <= 22:
+        print(str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) + ' Ожидание 5 мин')
+        # time.sleep(301)
+    else:
+        print(str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) + ' Ожидание 20 мин')
+        time.sleep(901)
